@@ -1,0 +1,21 @@
+[package]
+name = 'kycdao'
+version = '1.0.0'
+[dependencies.AptosFramework]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-framework'
+[dependencies.AptosTokenObjects]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-token-objects'
+[dependencies.Pyth]
+git = "https://github.com/pyth-network/pyth-crosschain.git"
+rev = "main"
+subdir = "target_chains/aptos/contracts"
+[addresses]
+# Pyth network addresses
+pyth = "7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b387"
+wormhole = "5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625"
+deployer = "b31e712b26fd295357355f6845e77c888298636609e93bc9b05f0f604049f434"
+admin_addr = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
