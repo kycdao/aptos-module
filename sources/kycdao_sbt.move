@@ -73,6 +73,8 @@ module kycdao_sbt_obj::kycdao_sbt {
     const EINVALID_SCHEME: u64 = 3;
     /// Specified proof of knowledge required to prove ownership of a public key is invalid
     const EINVALID_PROOF_OF_KNOWLEDGE: u64 = 4;
+    /// Specified address does not have a valid token
+    const EINVALID_TOKEN: u64 = 5;
 
     /// The ambassador token collection name
     const COLLECTION_NAME: vector<u8> = b"kycDAO SBT Collection";
@@ -246,13 +248,13 @@ module kycdao_sbt_obj::kycdao_sbt {
 
     // View functions
 
-    /// Get the token address from the receiver's address, fails if the token does not exist
     #[view]
-    public fun get_token_addr_from_acct(addr: address): address acquires KycDAOToken {
+    /// Get the token address from the receiver's address, fails if the token does not exist
+    public fun get_token_addr_from_acct(addr: address): address {
         let collection_name = string::utf8(COLLECTION_NAME);
         let token_name = add_address_to_string(TOKEN_NAME_BASE, &addr);
         let token_addr = token::create_token_address(&@kycdao_sbt_obj, &collection_name, &token_name);
-        assert(object::is_object(token_addr));
+        assert!(object::is_object(token_addr), error::invalid_argument(EINVALID_TOKEN));
         token_addr
     }
 
