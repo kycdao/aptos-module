@@ -121,7 +121,7 @@ module kycdao_sbt_obj::kycdao_sbt {
             public_key,
             signer_cap: resource_signer_cap,
             token_minting_events: account::new_event_handle<TokenMintingEvent>(resource_signer),
-            token_uri_base: TOKEN_NAME_BASE,
+            token_uri_base: TOKEN_URI_BASE,
             subscription_cost_per_year: 5 * 100000,
         });
     }
