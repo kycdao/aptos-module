@@ -1,5 +1,7 @@
 
+
 module kycdao_sbt_obj::kycdao_sbt {
+
     use std::error;
     use std::signer;
     use std::string::{Self, String};
@@ -17,14 +19,14 @@ module kycdao_sbt_obj::kycdao_sbt {
     use aptos_framework::object::{Self};
     use aptos_token_objects::collection;
     use aptos_token_objects::token;
-    #[test_only]
-    use aptos_framework::account::create_account_for_test;
-    use aptos_std::ed25519::ValidatedPublicKey;
-
     use pyth::pyth;
     use pyth::price_identifier;
     use pyth::i64;
     use pyth::price;
+
+    #[test_only]
+    use aptos_framework::account::create_account_for_test;
+    use aptos_std::ed25519::ValidatedPublicKey;
 
     // This struct stores the token receiver's address in the event of token minting
     struct TokenMintingEvent has drop, store {
@@ -39,6 +41,7 @@ module kycdao_sbt_obj::kycdao_sbt {
         token_minting_events: EventHandle<TokenMintingEvent>,
         token_uri_base: vector<u8>,
         subscription_cost_per_year: u64,
+        price_feed_identifier: vector<u8>,
     }
 
     // This struct stores the challenge message that proves that the resource signer wants to mint this token
@@ -67,14 +70,10 @@ module kycdao_sbt_obj::kycdao_sbt {
 
     /// Action not authorized because the signer is not the admin of this module
     const ENOT_AUTHORIZED: u64 = 1;
-    /// Specified public key is not the same as the admin's public key
-    const EWRONG_PUBLIC_KEY: u64 = 2;
-    /// Specified scheme required to proceed with the smart contract operation - can only be ED25519_SCHEME(0) OR MULTI_ED25519_SCHEME(1)
-    const EINVALID_SCHEME: u64 = 3;
     /// Specified proof of knowledge required to prove ownership of a public key is invalid
-    const EINVALID_PROOF_OF_KNOWLEDGE: u64 = 4;
+    const EINVALID_PROOF_OF_KNOWLEDGE: u64 = 2;
     /// Specified address does not have a valid token
-    const EINVALID_TOKEN: u64 = 5;
+    const EINVALID_TOKEN: u64 = 3;
 
     /// The ambassador token collection name
     const COLLECTION_NAME: vector<u8> = b"kycDAO SBT Collection";
@@ -92,6 +91,14 @@ module kycdao_sbt_obj::kycdao_sbt {
     const SUBSCRIPTION_COST_FACTOR: u64 = 100000000;
     /// The number of seconds in a year
     const SECS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
+    /// The initial subscription cost in USD, can be updated with `set_subscription_cost`
+    const INITIAL_SUBSCRIPTION_COST: u64 = 5 * 100000; // 0.005 USD (testnet) 
+
+    /// The initial public key used by the signer for minting (testnet), can be updated with `set_public_key`
+    const MINT_PUBLIC_KEY: vector<u8> = x"7D5A3BAB5C4BB2E00BA1C51DD0C2A14C54231684025A1C72FCB144BE59B4C996";
+
+    /// The Pyth network price identifier for APT/USD (testnet), can be updated with `set_price_feed_identifier`
+    const PRICE_FEED_IDENTIFIER: vector<u8> = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
 
     /// Octas per aptos coin
     const OCTAS_PER_APTOS: u64 = 100000000;
@@ -115,14 +122,15 @@ module kycdao_sbt_obj::kycdao_sbt {
         let resource_signer_cap = resource_account::retrieve_resource_account_cap(resource_signer, @source_addr);
 
         // setting the admin public key here but can be updated with `set_public_key`
-        let pk_bytes = x"7D5A3BAB5C4BB2E00BA1C51DD0C2A14C54231684025A1C72FCB144BE59B4C996";
+        let pk_bytes = MINT_PUBLIC_KEY;
         let public_key = std::option::extract(&mut ed25519::new_validated_public_key_from_bytes(pk_bytes));
         move_to(resource_signer, ModuleData {
             public_key,
             signer_cap: resource_signer_cap,
             token_minting_events: account::new_event_handle<TokenMintingEvent>(resource_signer),
             token_uri_base: TOKEN_URI_BASE,
-            subscription_cost_per_year: 5 * 100000,
+            subscription_cost_per_year: INITIAL_SUBSCRIPTION_COST,
+            price_feed_identifier: PRICE_FEED_IDENTIFIER,
         });
     }
 
@@ -138,11 +146,12 @@ module kycdao_sbt_obj::kycdao_sbt {
     public entry fun mint_with_signature(receiver: &signer, metadata_cid: String, expiry: u64, seconds_to_pay: u64, verification_tier: String, mint_proof_signature: vector<u8>) acquires ModuleData {
         let receiver_addr = signer::address_of(receiver);
 
-        // calculate the mint cost in APT
-        let mint_cost = get_required_mint_cost_for_seconds(seconds_to_pay);
-
-        // transfer the mint cost from the receiver to the admin
-        coin::transfer<AptosCoin>(receiver, @admin_addr, mint_cost);
+        if (seconds_to_pay > 0) {
+            // calculate the mint cost in APT
+            let mint_cost = get_required_mint_cost_for_seconds(seconds_to_pay);
+            // transfer the mint cost from the receiver to the admin
+            coin::transfer<AptosCoin>(receiver, @admin_addr, mint_cost);
+        };
 
         // get the collection minter
         let module_data = borrow_global_mut<ModuleData>(@kycdao_sbt_obj);
@@ -225,6 +234,13 @@ module kycdao_sbt_obj::kycdao_sbt {
         module_data.public_key = std::option::extract(&mut ed25519::new_validated_public_key_from_bytes(pk_bytes));
     }
 
+    public entry fun set_price_feed_identifier(caller: &signer, price_feed_id: vector<u8>) acquires ModuleData {
+        let caller_address = signer::address_of(caller);
+        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        let module_data = borrow_global_mut<ModuleData>(@kycdao_sbt_obj);
+        module_data.price_feed_identifier = price_feed_id;
+    }
+
     public entry fun set_subscription_cost(caller: &signer, new_subscription_cost: u64) acquires ModuleData {
         let caller_address = signer::address_of(caller);
         assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
@@ -282,24 +298,160 @@ module kycdao_sbt_obj::kycdao_sbt {
 
     #[view]
     public fun get_required_mint_cost_for_seconds(seconds: u64): u64 acquires ModuleData {
-        let subscription_cost_per_year = borrow_global<ModuleData>(@kycdao_sbt_obj).subscription_cost_per_year;
-        let cost_usd = (seconds * subscription_cost_per_year) / SECS_IN_YEAR;
-        (cost_usd * get_apt_usd_price()) / SUBSCRIPTION_COST_FACTOR
+        let module_data = borrow_global<ModuleData>(@kycdao_sbt_obj);
+        let cost_usd = (seconds * module_data.subscription_cost_per_year) / SECS_IN_YEAR;
+        (cost_usd * get_apt_usd_price(module_data.price_feed_identifier)) / SUBSCRIPTION_COST_FACTOR
     }
 
     /// Uses the Pyth Network to return the APT/USD price.
-    fun get_apt_usd_price(): u64 {
-
-        // Price Feed Identifier of APT/USD in Testnet
-        let apt_price_identifier = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
-
+    fun get_apt_usd_price(price_feed_id: vector<u8>): u64 {
         // Now we can use the prices which we have just updated
-        let apt_usd_price_id = price_identifier::from_byte_vec(apt_price_identifier);
+        let apt_usd_price_id = price_identifier::from_byte_vec(price_feed_id);
         let price = pyth::get_price_unsafe(apt_usd_price_id);
         let price_positive = i64::get_magnitude_if_positive(&price::get_price(&price)); // This will fail if the price is negative
         let expo_magnitude = i64::get_magnitude_if_negative(&price::get_expo(&price)); // This will fail if the exponent is positive
 
         let price_in_aptos_coin =  (OCTAS_PER_APTOS * pow(10, expo_magnitude)) / price_positive; // 1 USD in APT
         price_in_aptos_coin
-    }        
+    }
+
+    //
+    // Tests
+    //
+
+    #[test_only]
+    public fun set_up_test(
+        origin_account: &signer,
+        resource_account: &signer,
+        collection_token_minter_public_key: &ValidatedPublicKey,
+        nft_receiver: &signer,
+        aptos_framework: &signer,
+    ) acquires ModuleData {
+        // set up global time for testing purpose
+        timestamp::set_time_has_started_for_testing(aptos_framework);
+        timestamp::update_global_time_for_test_secs(10);
+
+        create_account_for_test(signer::address_of(origin_account));
+
+        // create a resource account from the origin account, mocking the module publishing process
+        resource_account::create_resource_account(origin_account, vector::empty<u8>(), vector::empty<u8>());
+
+        init_module(resource_account);
+
+        let admin = create_account_for_test(@admin_addr);
+        let pk_bytes = ed25519::validated_public_key_to_bytes(collection_token_minter_public_key);
+        set_public_key(&admin, pk_bytes);
+
+        create_account_for_test(signer::address_of(nft_receiver));
+    }
+
+    #[test (aptos_framework = @aptos_framework, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    public entry fun test_mint_happy_path(aptos_framework: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData, KycDAOToken {
+        let (admin_sk, admin_pk) = ed25519::generate_keys();
+        set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
+        let receiver_addr = signer::address_of(&nft_receiver);
+        let proof_challenge = MintProofChallenge {
+            receiver_account_sequence_number: account::get_sequence_number(receiver_addr),
+            receiver_account_address: receiver_addr,
+            metadata_cid: string::utf8(b"1234"), 
+            expiry: 100000000000, 
+            seconds_to_pay: 0, 
+            verification_tier: string::utf8(b"KYC_1")             
+        };
+
+        let sig = ed25519::sign_struct(&admin_sk, proof_challenge);
+
+        // mint sbt to this receiver
+        mint_with_signature(
+            &nft_receiver, 
+            string::utf8(b"1234"), 
+            100000000000, 
+            0, 
+            string::utf8(b"KYC_1"), 
+            ed25519::signature_to_bytes(&sig)
+        );
+
+        // check that the token was minted
+        let token_addr = get_token_addr_from_acct(receiver_addr);
+        assert!(object::is_object(token_addr), 1);
+
+        // check has_valid_token
+        assert!(has_valid_token(receiver_addr), 2);
+
+    }
+
+    #[test (aptos_framework = @aptos_framework, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    #[expected_failure(abort_code = 0x10002, location = kycdao_sbt_obj::kycdao_sbt)]
+    public entry fun test_invalid_proof_struct(aptos_framework: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData {
+        let (admin_sk, admin_pk) = ed25519::generate_keys();
+        set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
+        let receiver_addr = signer::address_of(&nft_receiver);
+        let proof_challenge = MintProofChallenge {
+            receiver_account_sequence_number: account::get_sequence_number(receiver_addr),
+            receiver_account_address: receiver_addr,
+            metadata_cid: string::utf8(b"1234"), 
+            expiry: 100000000000, 
+            seconds_to_pay: 0, 
+            verification_tier: string::utf8(b"KYC_1")             
+        };
+
+        let sig = ed25519::sign_struct(&admin_sk, proof_challenge);
+
+        // change seconds_to_pay and expect failure
+        mint_with_signature(
+            &nft_receiver, 
+            string::utf8(b"1111"), 
+            100000000000, 
+            0, 
+            string::utf8(b"KYC_1"), 
+            ed25519::signature_to_bytes(&sig)
+        );
+    }
+
+    #[test (aptos_framework = @aptos_framework, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    #[expected_failure(abort_code = 0x10002, location = kycdao_sbt_obj::kycdao_sbt)]
+    public entry fun test_invalid_signature(aptos_framework: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData {
+        let (admin_sk, admin_pk) = ed25519::generate_keys();
+        set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
+        let receiver_addr = signer::address_of(&nft_receiver);
+        let proof_challenge = MintProofChallenge {
+            receiver_account_sequence_number: account::get_sequence_number(receiver_addr),
+            receiver_account_address: receiver_addr,
+            metadata_cid: string::utf8(b"1234"), 
+            expiry: 100000000000, 
+            seconds_to_pay: 0, 
+            verification_tier: string::utf8(b"KYC_1")             
+        };
+
+        let sig = ed25519::sign_struct(&admin_sk, proof_challenge);
+        let sig_bytes = ed25519::signature_to_bytes(&sig);
+
+        // Pollute signature.
+        let first_sig_byte = vector::borrow_mut(&mut sig_bytes, 0);
+        *first_sig_byte = *first_sig_byte + 1;
+
+        mint_with_signature(
+            &nft_receiver, 
+            string::utf8(b"1234"), 
+            100000000000, 
+            0, 
+            string::utf8(b"KYC_1"), 
+            sig_bytes
+        );
+    }
+
+    #[test (aptos_framework = @aptos_framework, admin = @admin_addr, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    public entry fun test_set_subscription_cost(aptos_framework: signer, admin: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData {
+        let (_admin_sk, admin_pk) = ed25519::generate_keys();
+        set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
+        set_subscription_cost(&admin, 0);
+    }
+
+    #[test (aptos_framework = @aptos_framework, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    #[expected_failure(abort_code = 0x50001, location = kycdao_sbt_obj::kycdao_sbt)]
+    public entry fun test_set_subscription_cost_not_admin(aptos_framework: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData {
+        let (_admin_sk, admin_pk) = ed25519::generate_keys();
+        set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
+        set_subscription_cost(&origin_account, 0);
+    }
 }

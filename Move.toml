@@ -13,9 +13,16 @@ subdir = 'aptos-move/framework/aptos-token-objects'
 git = "https://github.com/pyth-network/pyth-crosschain.git"
 rev = "main"
 subdir = "target_chains/aptos/contracts"
+
 [addresses]
-# Pyth network addresses
+admin_addr = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
+# Pyth network addresses (both testnet and mainnet)
 pyth = "7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b387"
 wormhole = "5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625"
 deployer = "b31e712b26fd295357355f6845e77c888298636609e93bc9b05f0f604049f434"
-admin_addr = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
+
+# This is... ugly, but you need to uncomment these named addresses when running tests,
+# but when deploying these should come from config.yaml
+# source_addr = "0xcafe"
+# kycdao_sbt_obj = "c3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5"
+# aptos_framework = "0x1"
