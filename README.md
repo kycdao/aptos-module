@@ -66,6 +66,14 @@ aptos move run --function-id kycdao_sbt_obj::kycdao_sbt::mint_with_signature --a
 
 ## Testing
 
-We should... add some tests
+You'll need to uncomment the named addresses for testing at the bottom of the `Move.toml` file.
+
+Then run:
+```bash
+aptos move test
+```
+
+
+
 
 
