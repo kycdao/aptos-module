@@ -1,0 +1,17 @@
+[package]
+name = 'kycdao_example'
+version = '1.0.0'
+[dependencies.AptosFramework]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-framework'
+[dependencies.AptosTokenObjects]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-token-objects'
+[dependencies.kycdao]
+git = 'https://github.com/kycdao/aptos-module.git'
+rev = 'main'
+
+[addresses]
+kycdao_sbt_obj = "a6e5cc07b1168e0d93db52cd7c75293bf2ea93c5bcbbd52b1888a0fd128b3112"

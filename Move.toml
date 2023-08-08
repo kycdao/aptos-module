@@ -15,6 +15,7 @@ rev = "main"
 subdir = "target_chains/aptos/contracts"
 
 [addresses]
+kycdao_sbt_obj = "_"
 admin_addr = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
 # Pyth network addresses (both testnet and mainnet)
 pyth = "7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b387"
