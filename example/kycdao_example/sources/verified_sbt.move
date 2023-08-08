@@ -9,21 +9,12 @@ module kycdao_example::verified_sbt {
     use std::option;
     use aptos_framework::account;
     use aptos_framework::event::{Self, EventHandle};
-    use aptos_framework::timestamp;
-    use aptos_framework::coin;
-    use aptos_framework::aptos_coin::AptosCoin;
     use aptos_framework::resource_account;
-    use aptos_std::ed25519;
     use aptos_std::string_utils;
-    use aptos_std::math64::pow;
     use aptos_framework::object::{Self};
     use aptos_token_objects::collection;
     use aptos_token_objects::token;
     use kycdao_sbt_obj::kycdao_sbt;
-
-    #[test_only]
-    use aptos_framework::account::create_account_for_test;
-    use aptos_std::ed25519::ValidatedPublicKey;
 
     // This struct stores the token receiver's address in the event of token minting
     struct TokenMintingEvent has drop, store {
@@ -110,6 +101,7 @@ module kycdao_example::verified_sbt {
             string::utf8(FIXED_TOKEN_URI),
         );
 
+        let object_signer = object::generate_signer(&constructor_ref);
         let transfer_ref = object::generate_transfer_ref(&constructor_ref);
 
         // Transfers the token to the `reciver_addr` address

@@ -16,14 +16,21 @@ subdir = "target_chains/aptos/contracts"
 
 [addresses]
 kycdao_sbt_obj = "_"
-admin_addr = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
+kycdao_deployer = "_"
+kycdao_admin = "_"
+
+# When deploying to testnet
+# kycdao_deployer = "9004e9cfb5fa0eba5823035b2461ae57fb6e4e0c3faf2ac1a9cbe5f624795675"
+# kycdao_admin = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
+
 # Pyth network addresses (both testnet and mainnet)
 pyth = "7e783b349d3e89cf5931af376ebeadbfab855b3fa239b7ada8f5a92fbea6b387"
 wormhole = "5bc11445584a763c1fa7ed39081f1b920954da14e04b32440cba863d03e19625"
 deployer = "b31e712b26fd295357355f6845e77c888298636609e93bc9b05f0f604049f434"
 
-# This is... ugly, but you need to uncomment these named addresses when running tests,
-# but when deploying these should come from config.yaml
-# source_addr = "0xcafe"
-# kycdao_sbt_obj = "c3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5"
-# aptos_framework = "0x1"
+[dev-addresses]
+# These addresses are only used for local testing
+kycdao_deployer = "0xcafe"
+kycdao_admin = "0xbeef"
+kycdao_sbt_obj = "c3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5"
+

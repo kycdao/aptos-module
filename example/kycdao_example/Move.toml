@@ -10,8 +10,17 @@ git = 'https://github.com/aptos-labs/aptos-core.git'
 rev = 'main'
 subdir = 'aptos-move/framework/aptos-token-objects'
 [dependencies.kycdao]
-git = 'https://github.com/kycdao/aptos-module.git'
-rev = 'main'
+local = '../../'
+# git = 'https://github.com/kycdao/aptos-module.git'
+# rev = 'main'
 
 [addresses]
+kycdao_example = "_"
+source_addr = "_"
+# testnet addresses
+kycdao_deployer = "9004e9cfb5fa0eba5823035b2461ae57fb6e4e0c3faf2ac1a9cbe5f624795675"
 kycdao_sbt_obj = "a6e5cc07b1168e0d93db52cd7c75293bf2ea93c5bcbbd52b1888a0fd128b3112"
+kycdao_admin = "3a87cc4c90ae0c635f0889eb026f9a3dbe6993981fdf6b944424910c596270de"
+
+[dev-addresses]
+source_addr = "d44616e4d13b51ff508a11596ad0d116b9b0c4a5a6bc56bed7ae8a4a9ca873e6"
