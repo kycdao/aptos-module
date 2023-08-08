@@ -119,7 +119,7 @@ module kycdao_sbt_obj::kycdao_sbt {
 
         // store the token data id within the module, so we can refer to it later
         // when we're minting the NFT
-        let resource_signer_cap = resource_account::retrieve_resource_account_cap(resource_signer, @source_addr);
+        let resource_signer_cap = resource_account::retrieve_resource_account_cap(resource_signer, @kycdao_deployer);
 
         // setting the admin public key here but can be updated with `set_public_key`
         let pk_bytes = MINT_PUBLIC_KEY;
@@ -150,7 +150,7 @@ module kycdao_sbt_obj::kycdao_sbt {
             // calculate the mint cost in APT
             let mint_cost = get_required_mint_cost_for_seconds(seconds_to_pay);
             // transfer the mint cost from the receiver to the admin
-            coin::transfer<AptosCoin>(receiver, @admin_addr, mint_cost);
+            coin::transfer<AptosCoin>(receiver, @kycdao_admin, mint_cost);
         };
 
         // get the collection minter
@@ -229,35 +229,35 @@ module kycdao_sbt_obj::kycdao_sbt {
     /// Set the public key of this minting contract
     public entry fun set_public_key(caller: &signer, pk_bytes: vector<u8>) acquires ModuleData {
         let caller_address = signer::address_of(caller);
-        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        assert!(caller_address == @kycdao_admin, error::permission_denied(ENOT_AUTHORIZED));
         let module_data = borrow_global_mut<ModuleData>(@kycdao_sbt_obj);
         module_data.public_key = std::option::extract(&mut ed25519::new_validated_public_key_from_bytes(pk_bytes));
     }
 
     public entry fun set_price_feed_identifier(caller: &signer, price_feed_id: vector<u8>) acquires ModuleData {
         let caller_address = signer::address_of(caller);
-        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        assert!(caller_address == @kycdao_admin, error::permission_denied(ENOT_AUTHORIZED));
         let module_data = borrow_global_mut<ModuleData>(@kycdao_sbt_obj);
         module_data.price_feed_identifier = price_feed_id;
     }
 
     public entry fun set_subscription_cost(caller: &signer, new_subscription_cost: u64) acquires ModuleData {
         let caller_address = signer::address_of(caller);
-        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        assert!(caller_address == @kycdao_admin, error::permission_denied(ENOT_AUTHORIZED));
         let module_data = borrow_global_mut<ModuleData>(@kycdao_sbt_obj);
         module_data.subscription_cost_per_year = new_subscription_cost;
     }
 
     public entry fun set_token_verified(caller: &signer, token_addr: address, new_verified: bool) acquires KycDAOToken {
         let caller_address = signer::address_of(caller);
-        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        assert!(caller_address == @kycdao_admin, error::permission_denied(ENOT_AUTHORIZED));
         let token = borrow_global_mut<KycDAOToken>(token_addr);
         token.verified = new_verified;
     }
 
     public entry fun set_token_expiry(caller: &signer, token_addr: address, new_expiry: u64) acquires KycDAOToken {
         let caller_address = signer::address_of(caller);
-        assert!(caller_address == @admin_addr, error::permission_denied(ENOT_AUTHORIZED));
+        assert!(caller_address == @kycdao_admin, error::permission_denied(ENOT_AUTHORIZED));
         let token = borrow_global_mut<KycDAOToken>(token_addr);
         token.expiry = new_expiry;
     }
@@ -338,7 +338,7 @@ module kycdao_sbt_obj::kycdao_sbt {
 
         init_module(resource_account);
 
-        let admin = create_account_for_test(@admin_addr);
+        let admin = create_account_for_test(@kycdao_admin);
         let pk_bytes = ed25519::validated_public_key_to_bytes(collection_token_minter_public_key);
         set_public_key(&admin, pk_bytes);
 
@@ -440,7 +440,7 @@ module kycdao_sbt_obj::kycdao_sbt {
         );
     }
 
-    #[test (aptos_framework = @aptos_framework, admin = @admin_addr, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
+    #[test (aptos_framework = @aptos_framework, admin = @kycdao_admin, origin_account = @0xcafe, resource_account = @0xc3bb8488ab1a5815a9d543d7e41b0e0df46a7396f89b22821f07a4362f75ddc5, nft_receiver = @0x123)]
     public entry fun test_set_subscription_cost(aptos_framework: signer, admin: signer, origin_account: signer, resource_account: signer, nft_receiver: signer) acquires ModuleData {
         let (_admin_sk, admin_pk) = ed25519::generate_keys();
         set_up_test(&origin_account, &resource_account, &admin_pk, &nft_receiver, &aptos_framework);
